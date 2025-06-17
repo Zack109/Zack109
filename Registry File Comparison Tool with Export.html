@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registry File Comparison Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style id="pageStyles">
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .file-input-label {
+            cursor: pointer;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            background-color: #4f46e5; /* Indigo */
+            color: white;
+            transition: background-color 0.2s;
+        }
+        .file-input-label:hover {
+            background-color: #4338ca; /* Darker Indigo */
+        }
+        .file-input {
+            display: none;
+        }
+        .card {
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .results-table th, .results-table td {
+            padding: 0.75rem;
+            border-bottom: 1px solid #e5e7eb; /* Gray border */
+            text-align: left;
+            word-break: break-word; 
+        }
+        .results-table th {
+            background-color: #f9fafb; /* Very light gray for headers */
+        }
+        .status-added { color: #10b981; /* Green */ font-weight: bold; }
+        .status-deleted { color: #ef4444; /* Red */ font-weight: bold; }
+        .status-modified { color: #f59e0b; /* Amber */ font-weight: bold; }
+        .path-highlight { background-color: #e0e7ff; padding: 2px 4px; border-radius: 3px; font-family: monospace;}
+        .value-name-highlight { font-family: monospace; color: #374151; }
+        .old-value { text-decoration: line-through; color: #9ca3af; }
+        .new-value { color: #1f2937; }
+        #loadingIndicator {
+            display: none; /* Hidden by default */
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.95); /* Slightly more opaque */
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+            z-index: 9999;
+            text-align: center;
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: #4f46e5; /* Indigo */
+            animation: spin 1s ease infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .export-button {
+            background-color: #06b6d4; /* Cyan */
+            color: white;
+            font-weight: bold;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            transition: background-color 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        .export-button:hover {
+            background-color: #0891b2; /* Darker Cyan */
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800">Registry File Comparison Tool</h1>
+            <p class="text-gray-600 mt-2">Upload two .reg files (before and after) to see the changes.</p>
+        </header>
+
+        <div class="grid md:grid-cols-2 gap-6 mb-8">
+            <div class="card">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">Before State</h2>
+                <label for="fileBefore" class="file-input-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    Select "Before" .reg File
+                </label>
+                <input type="file" id="fileBefore" accept=".reg" class="file-input">
+                <p id="fileNameBefore" class="mt-3 text-sm text-gray-500">No file selected.</p>
+            </div>
+            <div class="card">
+                <h2 class="text-xl font-semibold text-gray-700 mb-4">After State</h2>
+                 <label for="fileAfter" class="file-input-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    Select "After" .reg File
+                </label>
+                <input type="file" id="fileAfter" accept=".reg" class="file-input">
+                <p id="fileNameAfter" class="mt-3 text-sm text-gray-500">No file selected.</p>
+            </div>
+        </div>
+
+        <div class="text-center mb-8">
+            <button id="compareButton" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg shadow-md transition duration-150 ease-in-out disabled:opacity-50" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Compare Files
+            </button>
+        </div>
+
+        <div id="loadingIndicator">
+            <div class="spinner"></div>
+            <p id="loadingText" class="text-gray-700">Processing, please wait...</p>
+        </div>
+
+        <div id="resultsArea" class="card hidden">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-semibold text-gray-700">Comparison Results</h2>
+                <button id="exportButton" class="export-button hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h10a1 1 0 001-1V10.414l.293.293a1 1 0 001.414-1.414l-7-7zM6 18v-6h8v6H6z"/>
+                        <path d="M9 12.586l-2.293-2.293a1 1 0 011.414-1.414L10 10.586l1.879-1.879a1 1 0 111.414 1.414L11 12.586V16h-2v-3.414z" />
+                    </svg>
+                    Export to HTML
+                </button>
+            </div>
+            <div id="summary" class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p class="text-blue-700"><strong id="keysAddedCount">0</strong> keys added, <strong id="keysDeletedCount">0</strong> keys deleted, <strong id="keysModifiedCount">0</strong> keys modified.</p>
+                <p class="text-blue-700"><strong id="valuesAddedCount">0</strong> values added, <strong id="valuesDeletedCount">0</strong> values deleted, <strong id="valuesModifiedCount">0</strong> values modified.</p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full results-table">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Registry Path</th>
+                            <th>Value Name</th>
+                            <th>Change Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                        <!-- Results will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+             <p id="noChangesMessage" class="text-center text-gray-500 py-4 hidden">No differences found between the two files.</p>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const fileBeforeInput = document.getElementById('fileBefore');
+        const fileAfterInput = document.getElementById('fileAfter');
+        const fileNameBefore = document.getElementById('fileNameBefore');
+        const fileNameAfter = document.getElementById('fileNameAfter');
+        const compareButton = document.getElementById('compareButton');
+        const resultsArea = document.getElementById('resultsArea');
+        const resultsTableBody = document.getElementById('resultsTableBody');
+        const noChangesMessage = document.getElementById('noChangesMessage');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const loadingTextElement = document.getElementById('loadingText');
+        const exportButton = document.getElementById('exportButton'); 
+        const summaryDiv = document.getElementById('summary'); 
+
+        // Summary count elements
+        const keysAddedCountEl = document.getElementById('keysAddedCount');
+        const keysDeletedCountEl = document.getElementById('keysDeletedCount');
+        const keysModifiedCountEl = document.getElementById('keysModifiedCount');
+        const valuesAddedCountEl = document.getElementById('valuesAddedCount');
+        const valuesDeletedCountEl = document.getElementById('valuesDeletedCount');
+        const valuesModifiedCountEl = document.getElementById('valuesModifiedCount');
+
+        let parsedBeforeData = null;
+        let parsedAfterData = null;
+
+        // Configuration for incremental processing
+        const LINES_PER_CHUNK_PARSING = 5000; // Number of lines to parse per chunk
+        const PATHS_PER_CHUNK_COMPARISON = 1000; // Number of paths to compare per chunk
+
+        // --- Event Listeners ---
+        fileBeforeInput.addEventListener('change', (event) => {
+            handleFileSelect(event, fileNameBefore, (data) => parsedBeforeData = data);
+        });
+
+        fileAfterInput.addEventListener('change', (event) => {
+            handleFileSelect(event, fileNameAfter, (data) => parsedAfterData = data);
+        });
+
+        compareButton.addEventListener('click', () => {
+            if (parsedBeforeData && parsedAfterData) {
+                loadingTextElement.textContent = 'Comparing files, please wait...';
+                loadingIndicator.style.display = 'block';
+                resultsArea.classList.add('hidden'); 
+                resultsTableBody.innerHTML = ''; 
+                noChangesMessage.classList.add('hidden');
+                exportButton.classList.add('hidden');
+
+                compareRegDataIncremental(parsedBeforeData, parsedAfterData,
+                    (differences) => { // onComplete
+                        displayResults(differences);
+                        resultsArea.classList.remove('hidden');
+                        loadingIndicator.style.display = 'none';
+                    },
+                    (errorMsg) => { // onError
+                        console.error("Error during comparison:", errorMsg);
+                        showModalMessage("An error occurred during file comparison. Please check console for details.");
+                        resultsArea.classList.remove('hidden'); // Still show area, might be empty
+                        loadingIndicator.style.display = 'none';
+                    },
+                    (progressPercentage) => { // onProgress
+                        loadingTextElement.textContent = `Comparing files... ${progressPercentage}%`;
+                    }
+                );
+            } else {
+                showModalMessage('Please select both "before" and "after" .reg files.');
+            }
+        });
+
+        exportButton.addEventListener('click', () => {
+            exportResultsToHTML();
+        });
+
+        // --- File Handling and Parsing ---
+        function handleFileSelect(event, fileNameElement, callback) {
+            const file = event.target.files[0];
+            if (file) {
+                fileNameElement.textContent = file.name;
+                loadingTextElement.textContent = `Processing ${file.name}, please wait... 0%`;
+                loadingIndicator.style.display = 'block';
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    parseRegFileIncremental(e.target.result, file.name,
+                        (parsedData) => { // onComplete
+                            callback(parsedData);
+                            checkEnableCompareButton();
+                            loadingIndicator.style.display = 'none';
+                        },
+                        (errorMsg) => { // onError
+                            showModalMessage(errorMsg);
+                            fileNameElement.textContent = 'Error: Invalid file. Select again.';
+                            callback(null);
+                            checkEnableCompareButton();
+                            loadingIndicator.style.display = 'none';
+                        },
+                        (progressPercentage) => { // onProgress
+                            loadingTextElement.textContent = `Processing ${file.name}... ${progressPercentage}%`;
+                        }
+                    );
+                };
+                reader.onerror = () => {
+                    const errorMsg = `Error reading file ${file.name}.`;
+                    showModalMessage(errorMsg);
+                    fileNameElement.textContent = 'Error reading file. Select again.';
+                    callback(null);
+                    checkEnableCompareButton();
+                    loadingIndicator.style.display = 'none';
+                }
+                reader.readAsText(file, 'UTF-16LE'); 
+            } else {
+                fileNameElement.textContent = 'No file selected.';
+                callback(null);
+                checkEnableCompareButton();
+            }
+        }
+
+        function checkEnableCompareButton() {
+            compareButton.disabled = !(parsedBeforeData && parsedAfterData);
+        }
+        
+        function showModalMessage(message) {
+            const existingModal = document.getElementById('customModalMessage');
+            if (existingModal) existingModal.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'customModalMessage';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                background-color: rgba(0,0,0,0.5); display: flex; 
+                justify-content: center; align-items: center; z-index: 10000; padding: 1rem;
+            `;
+            const modalContent = document.createElement('div');
+            modalContent.style.cssText = `
+                background-color: white; padding: 25px; border-radius: 8px; 
+                box-shadow: 0 5px 15px rgba(0,0,0,0.3); text-align: center; max-width: 500px; width: 90%;
+            `;
+            const messageP = document.createElement('p');
+            messageP.textContent = message;
+            messageP.style.marginBottom = '15px';
+            messageP.style.wordBreak = 'break-word';
+
+            const okButton = document.createElement('button');
+            okButton.textContent = 'OK';
+            okButton.style.cssText = `
+                padding: 10px 20px; background-color: #4f46e5; color: white; 
+                border: none; border-radius: 5px; cursor: pointer;
+            `;
+            okButton.onclick = () => modal.remove();
+
+            modalContent.appendChild(messageP);
+            modalContent.appendChild(okButton);
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+        }
+
+        function parseRegFileIncremental(content, fileName, onComplete, onError, onProgress) {
+            const lines = content.split(/\r?\n/);
+            const registry = {};
+            let currentPath = null;
+            let currentIndex = 0;
+            const totalLines = lines.length;
+
+            let startIndex = 0;
+            if (lines.length > 0 && lines[0].toLowerCase().includes("windows registry editor version")) { 
+                startIndex = 1;
+            }
+            while(startIndex < lines.length && lines[startIndex].trim() === "") {
+                startIndex++;
+            }
+            currentIndex = startIndex;
+
+            function processChunk() {
+                try {
+                    const chunkEndTime = Date.now() + 50; // Process for up to 50ms per chunk to yield frequently
+                    let linesProcessedInChunk = 0;
+
+                    while (Date.now() < chunkEndTime && currentIndex < totalLines) {
+                        let line = lines[currentIndex].trimEnd(); 
+                        
+                        while (line.endsWith('\\') && currentIndex + 1 < totalLines) {
+                            currentIndex++;
+                            line = line.slice(0, -1) + lines[currentIndex].trim();
+                        }
+                        line = line.trimStart(); 
+
+                        if (line.startsWith('[')) { 
+                            currentPath = line; 
+                            if (!registry[currentPath]) {
+                                registry[currentPath] = {};
+                            }
+                        } else if (currentPath && line !== "") { 
+                            const firstEqualSign = line.indexOf('=');
+                            if (firstEqualSign === -1) { 
+                                currentIndex++; // Move to next line if this one is invalid
+                                linesProcessedInChunk++;
+                                continue;
+                            }
+
+                            let valueName = line.substring(0, firstEqualSign);
+                            let valueDataRaw = line.substring(firstEqualSign + 1);
+                            
+                            if (valueName.startsWith('"') && valueName.endsWith('"')) {
+                                valueName = valueName.substring(1, valueName.length - 1);
+                            } else if (valueName === '@') {
+                                valueName = "(Default)";
+                            }
+
+                            let type = "REG_SZ"; 
+                            let data = "";
+
+                            if (valueDataRaw.startsWith('"')) { 
+                                type = "REG_SZ";
+                                data = valueDataRaw.substring(1, valueDataRaw.length - 1).replace(/\\\\/g, '\\').replace(/\\"/g, '"');
+                            } else if (valueDataRaw.toLowerCase().startsWith('dword:')) { 
+                                type = "REG_DWORD";
+                                data = valueDataRaw.substring(6); 
+                            } else if (valueDataRaw.toLowerCase().startsWith('hex(')) { 
+                                const typeMatch = valueDataRaw.match(/^hex\((\d+)\):(.*)/i);
+                                if (typeMatch) {
+                                    const typeCode = parseInt(typeMatch[1], 10); 
+                                    data = typeMatch[2].replace(/,/g, ''); 
+                                    switch(typeCode) {
+                                        case 2: type = "REG_EXPAND_SZ"; break;
+                                        case 7: type = "REG_MULTI_SZ"; break; 
+                                        case 11: type = "REG_QWORD"; break; 
+                                        default: type = `REG_HEX(${typeCode})`;
+                                    }
+                                } else { 
+                                   type = "REG_BINARY"; 
+                                   data = valueDataRaw.substring(valueDataRaw.toLowerCase().indexOf(':') + 1).replace(/,/g, '');
+                                }
+                            } else if (valueDataRaw.toLowerCase().startsWith('hex:')) { 
+                                type = "REG_BINARY";
+                                data = valueDataRaw.substring(4).replace(/,/g, ''); 
+                            } else if (valueDataRaw === "-") { 
+                                type = "DELETE_VALUE_MARKER";
+                                data = "-";
+                            } else {
+                                type = "REG_SZ_UNQUOTED";
+                                data = valueDataRaw;
+                            }
+                            registry[currentPath][valueName] = { type, data };
+                        }
+                        currentIndex++;
+                        linesProcessedInChunk++;
+                    } // End of while (Date.now() < chunkEndTime && currentIndex < totalLines)
+
+                    if (onProgress) {
+                        const progress = totalLines > 0 ? Math.round((currentIndex / totalLines) * 100) : 100;
+                        onProgress(progress);
+                    }
+
+                    if (currentIndex < totalLines) {
+                        setTimeout(processChunk, 0); 
+                    } else {
+                        onComplete(registry); 
+                    }
+                } catch (error) {
+                    console.error(`Error parsing file ${fileName} incrementally:`, error);
+                    onError(`Error parsing ${fileName}: ${error.message}.`);
+                }
+            }
+            setTimeout(processChunk, 0); 
+        }
+
+
+        function compareRegDataIncremental(beforeData, afterData, onComplete, onError, onProgress) {
+            const differences = [];
+            const allPathsArray = Array.from(new Set([...Object.keys(beforeData), ...Object.keys(afterData)]));
+            const totalPaths = allPathsArray.length;
+            let currentPathIndex = 0;
+
+            let stats = {
+                keysAdded: 0, keysDeleted: 0, keysModified: 0,
+                valuesAdded: 0, valuesDeleted: 0, valuesModified: 0
+            };
+
+            function processPathChunk() {
+                try {
+                    const chunkEndTime = Date.now() + 50; // Process for up to 50ms
+                    
+                    while (Date.now() < chunkEndTime && currentPathIndex < totalPaths) {
+                        const path = allPathsArray[currentPathIndex];
+                        const beforeKey = beforeData[path];
+                        const afterKey = afterData[path];
+
+                        if (beforeKey && !afterKey) { 
+                            differences.push({ status: 'KEY_DELETED', path, oldKeyValues: beforeKey });
+                            stats.keysDeleted++;
+                            stats.valuesDeleted += Object.keys(beforeKey).length;
+                        } else if (!beforeKey && afterKey) { 
+                            differences.push({ status: 'KEY_ADDED', path, newKeyValues: afterKey });
+                            stats.keysAdded++;
+                            stats.valuesAdded += Object.keys(afterKey).length;
+                        } else if (beforeKey && afterKey) { 
+                            const valueChanges = [];
+                            const allValueNames = new Set([...Object.keys(beforeKey), ...Object.keys(afterKey)]);
+                            let keyModifiedThisIteration = false; 
+
+                            allValueNames.forEach(valueName => { // This inner loop is still synchronous per path
+                                const beforeValue = beforeKey[valueName];
+                                const afterValue = afterKey[valueName];
+
+                                if (beforeValue && !afterValue) { 
+                                    valueChanges.push({ status: 'DELETED', path, valueName, oldValue: beforeValue });
+                                    stats.valuesDeleted++;
+                                    keyModifiedThisIteration = true;
+                                } else if (!beforeValue && afterValue) { 
+                                    valueChanges.push({ status: 'ADDED', path, valueName, newValue: afterValue });
+                                    stats.valuesAdded++;
+                                    keyModifiedThisIteration = true;
+                                } else if (beforeValue && afterValue) {
+                                    if (beforeValue.type !== afterValue.type || beforeValue.data !== afterValue.data) {
+                                        valueChanges.push({ status: 'MODIFIED', path, valueName, oldValue: beforeValue, newValue: afterValue });
+                                        stats.valuesModified++;
+                                        keyModifiedThisIteration = true;
+                                    }
+                                }
+                            });
+
+                            if (keyModifiedThisIteration) { 
+                                stats.keysModified++;
+                                differences.push(...valueChanges);
+                            }
+                        }
+                        currentPathIndex++;
+                    } // End of while loop for chunk
+
+                    if (onProgress) {
+                        const progress = totalPaths > 0 ? Math.round((currentPathIndex / totalPaths) * 100) : 100;
+                        onProgress(progress);
+                    }
+
+                    if (currentPathIndex < totalPaths) {
+                        setTimeout(processPathChunk, 0);
+                    } else {
+                        keysAddedCountEl.textContent = stats.keysAdded;
+                        keysDeletedCountEl.textContent = stats.keysDeleted;
+                        keysModifiedCountEl.textContent = stats.keysModified;
+                        valuesAddedCountEl.textContent = stats.valuesAdded;
+                        valuesDeletedCountEl.textContent = stats.valuesDeleted;
+                        valuesModifiedCountEl.textContent = stats.valuesModified;
+                        onComplete(differences);
+                    }
+                } catch (e) {
+                    console.error("Error in compareRegDataIncremental:", e);
+                    onError(e.message || "Unknown comparison error");
+                }
+            }
+            setTimeout(processPathChunk, 0);
+        }
+
+        // --- Displaying Results ---
+        function displayResults(differences) {
+            resultsTableBody.innerHTML = ''; 
+
+            if (differences.length === 0) {
+                noChangesMessage.classList.remove('hidden');
+                summaryDiv.classList.add('hidden'); 
+                exportButton.classList.add('hidden');
+                return;
+            }
+            
+            summaryDiv.classList.remove('hidden'); 
+            noChangesMessage.classList.add('hidden');
+            exportButton.classList.remove('hidden'); 
+
+
+            differences.forEach(diff => {
+                const row = resultsTableBody.insertRow();
+                const statusCell = row.insertCell();
+                const pathCell = row.insertCell();
+                const valueNameCell = row.insertCell();
+                const detailsCell = row.insertCell();
+
+                pathCell.innerHTML = `<span class="path-highlight">${escapeHtml(diff.path)}</span>`;
+
+                switch (diff.status) {
+                    case 'KEY_ADDED':
+                        statusCell.innerHTML = `<span class="status-added">KEY ADDED</span>`;
+                        valueNameCell.textContent = '-'; 
+                        let newValuesHtml = '<ul class="list-disc list-inside pl-4">'; 
+                        for (const valName in diff.newKeyValues) {
+                            newValuesHtml += `<li><span class="value-name-highlight">${escapeHtml(valName)}</span>: <span class="new-value">${escapeHtml(truncateData(diff.newKeyValues[valName].data))} (${escapeHtml(diff.newKeyValues[valName].type)})</span></li>`;
+                        }
+                        newValuesHtml += '</ul>';
+                        detailsCell.innerHTML = newValuesHtml;
+                        break;
+                    case 'KEY_DELETED':
+                        statusCell.innerHTML = `<span class="status-deleted">KEY DELETED</span>`;
+                        valueNameCell.textContent = '-';
+                        let oldValuesHtml = '<ul class="list-disc list-inside pl-4">'; 
+                        for (const valName in diff.oldKeyValues) {
+                            oldValuesHtml += `<li><span class="value-name-highlight">${escapeHtml(valName)}</span>: <span class="old-value">${escapeHtml(truncateData(diff.oldKeyValues[valName].data))} (${escapeHtml(diff.oldKeyValues[valName].type)})</span></li>`;
+                        }
+                        oldValuesHtml += '</ul>';
+                        detailsCell.innerHTML = oldValuesHtml;
+                        break;
+                    case 'ADDED':
+                        statusCell.innerHTML = `<span class="status-added">VALUE ADDED</span>`;
+                        valueNameCell.innerHTML = `<span class="value-name-highlight">${escapeHtml(diff.valueName)}</span>`;
+                        detailsCell.innerHTML = `<span class="new-value">${escapeHtml(truncateData(diff.newValue.data))} (${escapeHtml(diff.newValue.type)})</span>`;
+                        break;
+                    case 'DELETED':
+                        statusCell.innerHTML = `<span class="status-deleted">VALUE DELETED</span>`;
+                        valueNameCell.innerHTML = `<span class="value-name-highlight">${escapeHtml(diff.valueName)}</span>`;
+                        detailsCell.innerHTML = `<span class="old-value">${escapeHtml(truncateData(diff.oldValue.data))} (${escapeHtml(diff.oldValue.type)})</span>`;
+                        break;
+                    case 'MODIFIED':
+                        statusCell.innerHTML = `<span class="status-modified">VALUE MODIFIED</span>`;
+                        valueNameCell.innerHTML = `<span class="value-name-highlight">${escapeHtml(diff.valueName)}</span>`;
+                        detailsCell.innerHTML = `
+                            <span class="old-value">${escapeHtml(truncateData(diff.oldValue.data))} (${escapeHtml(diff.oldValue.type)})</span>
+                            <span class="text-gray-400 mx-1">&rarr;</span>
+                            <span class="new-value">${escapeHtml(truncateData(diff.newValue.data))} (${escapeHtml(diff.newValue.type)})</span>`;
+                        break;
+                }
+            });
+        }
+
+        function escapeHtml(unsafe) {
+            if (typeof unsafe !== 'string') {
+                try {
+                    return String(unsafe)
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                        .replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#039;");
+                } catch (e) {
+                    return 'INVALID_DATA'; 
+                }
+            }
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+
+        function truncateData(data, maxLength = 100) {
+            if (typeof data === 'string' && data.length > maxLength) {
+                return data.substring(0, maxLength) + '...';
+            }
+            return data;
+        }
+
+        // --- Export Functionality ---
+        function exportResultsToHTML() {
+            const styles = document.getElementById('pageStyles').innerHTML;
+            const summaryHTML = summaryDiv.outerHTML;
+            const tableHTML = document.querySelector('.results-table').outerHTML;
+            const filenameBefore = fileNameBefore.textContent === 'No file selected.' ? 'before.reg' : fileNameBefore.textContent;
+            const filenameAfter = fileNameAfter.textContent === 'No file selected.' ? 'after.reg' : fileNameAfter.textContent;
+
+
+            const htmlContent = `
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Registry Comparison Results</title>
+                    <style>
+                        ${styles}
+                        body { padding: 1rem; background-color: #f9fafb; }
+                        .card { margin-bottom: 0; } 
+                    </style>
+                </head>
+                <body>
+                    <div class="max-w-5xl mx-auto">
+                        <header class="mb-8 text-center">
+                            <h1 class="text-3xl font-bold text-gray-800">Registry Comparison Report</h1>
+                            <p class="text-gray-600 mt-1">Comparison between: <strong>${escapeHtml(filenameBefore)}</strong> and <strong>${escapeHtml(filenameAfter)}</strong></p>
+                        </header>
+                        <div class="card">
+                            ${summaryHTML}
+                            <div class="overflow-x-auto">
+                                ${tableHTML}
+                            </div>
+                        </div>
+                         <footer class="text-center text-sm text-gray-500 mt-8">
+                            Report generated by Registry File Comparison Tool on ${new Date().toLocaleString()}
+                        </footer>
+                    </div>
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `registry_comparison_${Date.now()}.html`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href); 
+        }
+    </script>
+</body>
+</html>

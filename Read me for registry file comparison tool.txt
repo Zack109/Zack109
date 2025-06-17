@@ -1,0 +1,39 @@
+Registry File Comparison Tool
+A lightweight, browser-based utility to compare two Windows Registry export (.reg) files and highlight the differences. Ideal for understanding what changes an application installer or update makes to the registry.
+
+Features
+Side-by-Side Comparison: Easily upload a "before" and an "after" .reg file.
+
+Detailed Difference Highlighting: Clearly visualizes added, deleted, and modified registry keys and values.
+
+Handles Large Files: Built to process large .reg files (200MB+) without freezing the browser by parsing and comparing the data in incremental chunks.
+
+Progress Indicators: Shows real-time progress for file parsing and comparison operations.
+
+Export to HTML: Save a standalone, styled HTML report of the comparison results to share with others.
+
+Client-Side Processing: All files are processed directly in your browser. No data is ever uploaded to a server, ensuring privacy and security.
+
+How to Use
+Open the Tool: Save the reg_compare.html file and open it in any modern web browser (like Chrome, Firefox, or Edge).
+
+Select Files:
+
+Click Select "Before" .reg File and choose the registry export taken before the change.
+
+Click Select "After" .reg File and choose the registry export taken after the change.
+
+Compare: Once both files are selected and processed, click the Compare Files button.
+
+View & Export:
+
+Review the summary and detailed list of changes.
+
+Click the Export to HTML button to download a shareable report.
+
+Technical Details
+Stack: A single, self-contained HTML file.
+
+JavaScript: Uses vanilla JavaScript for all logic, with no external frameworks.
+
+Styling: Styled with Tailwind CSS for a clean and responsive interface.
